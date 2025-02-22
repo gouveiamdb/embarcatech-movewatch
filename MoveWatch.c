@@ -33,11 +33,87 @@
 #define NUM_PIXELS      25    // Total de LEDs na matriz (5x5)
 #define DEBOUNCE_DELAY  200   // Tempo de debounce em ms
 
+/**
+ * Inicializa os pinos GPIO
+ * Configura direção, pull-ups e interrupções para os pinos
+ */
+void init_gpio() {
+    // 1. Inicialização dos pinos de entrada (Botões)
+    gpio_init(BOTAO_A);        // GPIO 5  - Botão Liga/Desliga
+    gpio_init(BOTAO_B);        // GPIO 6  - Botão Reconhecimento
+    gpio_init(JOYSTICK_BTN);   // GPIO 22 - Botão do Joystick
+    
+    // Configura direção como entrada
+    gpio_set_dir(BOTAO_A, GPIO_IN);
+    gpio_set_dir(BOTAO_B, GPIO_IN);
+    gpio_set_dir(JOYSTICK_BTN, GPIO_IN);
+    
+    // Habilita resistores pull-up internos
+    // Isso mantém os pinos em nível alto quando não pressionados
+    gpio_pull_up(BOTAO_A);
+    gpio_pull_up(BOTAO_B);
+    gpio_pull_up(JOYSTICK_BTN);
+    
+    // 2. Inicialização dos pinos de saída (LEDs)
+    gpio_init(LED_RED);        // GPIO 13 - LED Vermelho
+    gpio_init(LED_GREEN);      // GPIO 11 - LED Verde
+    gpio_init(LED_BLUE);       // GPIO 12 - LED Azul
+    gpio_init(BUZZER);         // GPIO 10 - Buzzer
+    
+    // Configura direção como saída
+    gpio_set_dir(LED_RED, GPIO_OUT);
+    gpio_set_dir(LED_GREEN, GPIO_OUT);
+    gpio_set_dir(LED_BLUE, GPIO_OUT);
+    gpio_set_dir(BUZZER, GPIO_OUT);
+    
+    // 3. Configuração das interrupções para os botões
+    // Configura callback para borda de descida (quando o botão é pressionado)
+    gpio_set_irq_enabled_with_callback(BOTAO_A, GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
+    gpio_set_irq_enabled(BOTAO_B, GPIO_IRQ_EDGE_FALL, true);  // Usa o mesmo callback
+    gpio_set_irq_enabled(JOYSTICK_BTN, GPIO_IRQ_EDGE_FALL, true);  // Usa o mesmo callback
+    
+    // 4. Estado inicial dos LEDs (todos apagados)
+    gpio_put(LED_RED, 0);
+    gpio_put(LED_GREEN, 0);
+    gpio_put(LED_BLUE, 0);
+}
 
+/**
+ * Callback de interrupção para os botões
+ * Atualiza o estado dos LEDs RGB
+ */
+void gpio_callback(uint gpio, uint32_t events) {
+    uint32_t current_time = to_ms_since_boot(get_absolute_time());
+    
+    if (current_time - last_button_time < DEBOUNCE_DELAY) {
+        return;
+    }
+    
+    last_button_time = current_time;
+
+    if (gpio == BOTAO_A) {
+        estado.sistemaAtivo = !estado.sistemaAtivo;
+        if (estado.sistemaAtivo) {
+            controlarLEDs(0, 255, 0);
+            atualizarDisplay("Sistema em", "Funcionamento");
+            clear_matrix();
+            printf("Sistema ativado\n");
+        } else {
+            controlarLEDs(0, 0, 0);
+            atualizarDisplay("Sistema", "Desligado");
+            clear_matrix();
+            printf("Sistema desativado\n");
+        }
+    } else if (gpio == BOTAO_B && estado.sistemaAtivo) {
+        estado.modoBusca = true;
+        printf("Iniciando reconhecimento\n");
+    }
+}
 
 int main()
 {
     stdio_init_all();
+    init_gpio();
 
     while (true) {
         printf("Hello, world!\n");
