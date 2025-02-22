@@ -146,6 +146,27 @@ void gpio_callback(uint gpio, uint32_t events) {
     }
 }
 
+// Funções de processamento
+uint16_t calculate_pwm(uint16_t value) {
+    const uint16_t center = 2048;
+    const uint16_t deadzone = 210;
+    
+    int32_t diff = abs((int32_t)value - center);
+    
+    if (diff < deadzone) {
+        return 0;
+    }
+    
+    diff -= deadzone;
+    uint32_t pwm = (diff * 4095) / (2048 - deadzone);
+    
+    if (pwm > 4095) {
+        pwm = 4095;
+    }
+    
+    return (uint16_t)pwm;
+}
+
 int main()
 {
     stdio_init_all();
