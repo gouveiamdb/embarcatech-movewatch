@@ -49,6 +49,23 @@ uint pwm_slice_num;
 static PIO ws2812_pio = pio0;
 static uint ws2812_sm = 0;
 
+// Padrões de alerta para matriz de LEDs
+const uint8_t padrao_x[MATRIX_SIZE][MATRIX_SIZE] = {
+    {1,0,0,0,1},
+    {0,1,0,1,0},
+    {0,0,1,0,0},
+    {0,1,0,1,0},
+    {1,0,0,0,1}
+};
+
+const uint8_t padrao_alerta[MATRIX_SIZE][MATRIX_SIZE] = {
+    {0,1,1,1,0},
+    {1,0,1,0,1},
+    {1,1,1,1,1},
+    {1,0,1,0,1},
+    {0,1,1,1,0}
+};
+
 /**
  * Inicializa os pinos GPIO
  * Configura direção, pull-ups e interrupções para os pinos
@@ -166,6 +183,30 @@ uint16_t calculate_pwm(uint16_t value) {
     
     return (uint16_t)pwm;
 }
+
+void monitorarJoystick() {
+    if (!estado.sistemaAtivo || estado.modoBusca) return;
+    
+    adc_select_input(0);
+    uint16_t x = adc_read();
+    adc_select_input(1);
+    uint16_t y = adc_read();
+    
+    uint16_t pwm_x = calculate_pwm(x);
+    uint16_t pwm_y = calculate_pwm(y);
+    
+    if (pwm_x > 0 || pwm_y > 0) {
+        if (!estado.movimentoDetectado) {
+            estado.movimentoDetectado = true;
+            controlarLEDs(255, 0, 0);
+            tocarBuzzer(2000, 500);
+            atualizarDisplay("ALERTA!", "Objeto em movimento");
+            display_pattern(padrao_x, 255, 0, 0);
+            enviarLog("Movimentação detectada!");
+        }
+    }
+}
+
 
 int main()
 {
