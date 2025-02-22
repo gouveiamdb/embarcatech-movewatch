@@ -60,6 +60,7 @@ target_include_directories(MoveWatch PRIVATE
 # Add any user requested libraries
 target_link_libraries(MoveWatch 
         pico_stdlib
+        hardware_pio
         hardware_adc
         hardware_i2c
         hardware_pwm
