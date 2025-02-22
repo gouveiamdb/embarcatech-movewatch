@@ -117,6 +117,12 @@ void init_adc() {
     adc_gpio_init(JOYSTICK_Y);
 }
 
+void init_uart() {
+    uart_init(UART_ID, BAUD_RATE);
+    gpio_set_function(UART_TX, GPIO_FUNC_UART);
+    gpio_set_function(UART_RX, GPIO_FUNC_UART);
+}
+
 void init_i2c() {
     i2c_init(I2C_PORT, 400 * 1000);  // 400kHz
     gpio_set_function(I2C_SDA, GPIO_FUNC_I2C);
@@ -263,6 +269,7 @@ int main()
     init_gpio();
     init_adc();
     init_i2c();
+    init_uart();
     init_pwm();
 
     while (true) {
