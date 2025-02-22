@@ -117,6 +117,14 @@ void init_adc() {
     adc_gpio_init(JOYSTICK_Y);
 }
 
+void init_i2c() {
+    i2c_init(I2C_PORT, 400 * 1000);  // 400kHz
+    gpio_set_function(I2C_SDA, GPIO_FUNC_I2C);
+    gpio_set_function(I2C_SCL, GPIO_FUNC_I2C);
+    gpio_pull_up(I2C_SDA);
+    gpio_pull_up(I2C_SCL);
+}
+
 /**
  * Callback de interrupção para os botões
  * Atualiza o estado dos LEDs RGB
@@ -238,6 +246,7 @@ int main()
     stdio_init_all();
     init_gpio();
     init_adc();
+    init_i2c();
 
     while (true) {
         if (estado.sistemaAtivo) {
