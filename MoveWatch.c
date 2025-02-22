@@ -132,6 +132,15 @@ void init_pwm() {
     pwm_set_enabled(pwm_slice_num, true);
 }
 
+
+void tocarBuzzer(uint16_t frequencia, uint16_t duracao) {
+    uint32_t wrap = clock_get_hz(clk_sys) / frequencia;
+    pwm_set_wrap(pwm_slice_num, wrap);
+    pwm_set_chan_level(pwm_slice_num, PWM_CHAN_A, wrap / 2);
+    sleep_ms(duracao);
+    pwm_set_chan_level(pwm_slice_num, PWM_CHAN_A, 0);
+}
+
 /**
  * Callback de interrupção para os botões
  * Atualiza o estado dos LEDs RGB
