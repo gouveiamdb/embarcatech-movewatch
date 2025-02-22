@@ -122,7 +122,21 @@ void gpio_callback(uint gpio, uint32_t events) {
         }
     } else if (gpio == BOTAO_B && estado.sistemaAtivo) {
         estado.modoBusca = true;
-        printf("Iniciando reconhecimento\n");
+        enviarLog("Reconhecimento iniciado");
+    } else if (gpio == JOYSTICK_BTN && estado.movimentoDetectado) {
+        if (!estado.confirmacaoMovimento) {
+            estado.confirmacaoMovimento = true;
+            controlarLEDs(255, 255, 0);
+            atualizarDisplay("Confirmar", "movimentacao?");
+            enviarLog("Aguardando confirmação");
+        } else {
+            estado.movimentoDetectado = false;
+            estado.confirmacaoMovimento = false;
+            controlarLEDs(0, 255, 0);
+            atualizarDisplay("Monitoramento", "em Operacao");
+            clear_matrix();
+            enviarLog("Movimentação confirmada");
+        }
     }
 }
 
