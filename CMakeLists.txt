@@ -38,6 +38,8 @@ pico_sdk_init()
 add_executable(MoveWatch MoveWatch.c 
 inc/ssd1306.c)
 
+pico_generate_pio_header(MoveWatch ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio)
+
 pico_set_program_name(MoveWatch "MoveWatch")
 pico_set_program_version(MoveWatch "0.1")
 
