@@ -33,6 +33,22 @@
 #define NUM_PIXELS      25    // Total de LEDs na matriz (5x5)
 #define DEBOUNCE_DELAY  200   // Tempo de debounce em ms
 
+// Variáveis globais para controle de estado
+typedef struct {
+    bool sistemaAtivo;
+    bool modoBusca;
+    bool movimentoDetectado;
+    bool confirmacaoMovimento;
+} EstadoSistema;
+
+// Variáveis globais
+volatile EstadoSistema estado = {0};
+volatile uint32_t last_button_time = 0;
+ssd1306_t display;
+uint pwm_slice_num;
+static PIO ws2812_pio = pio0;
+static uint ws2812_sm = 0;
+
 /**
  * Inicializa os pinos GPIO
  * Configura direção, pull-ups e interrupções para os pinos
