@@ -125,6 +125,13 @@ void init_i2c() {
     gpio_pull_up(I2C_SCL);
 }
 
+void init_pwm() {
+    gpio_set_function(BUZZER, GPIO_FUNC_PWM);
+    pwm_slice_num = pwm_gpio_to_slice_num(BUZZER);
+    pwm_set_wrap(pwm_slice_num, 4095);
+    pwm_set_enabled(pwm_slice_num, true);
+}
+
 /**
  * Callback de interrupção para os botões
  * Atualiza o estado dos LEDs RGB
@@ -247,6 +254,7 @@ int main()
     init_gpio();
     init_adc();
     init_i2c();
+    init_pwm();
 
     while (true) {
         if (estado.sistemaAtivo) {
