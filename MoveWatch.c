@@ -207,6 +207,31 @@ void monitorarJoystick() {
     }
 }
 
+void processarModoBusca() {
+    if (!estado.modoBusca) return;
+    
+    for (int i = 0; i < 5; i++) {
+        atualizarDisplay("Reconhecendo", "ambiente...");
+        
+        for (int j = 0; j < 10; j++) {
+            controlarLEDs(0, 0, 255);
+            display_pattern(padrao_alerta, 0, 0, 255);
+            sleep_ms(100);
+            controlarLEDs(0, 0, 0);
+            clear_matrix();
+            sleep_ms(100);
+        }
+        
+        tocarBuzzer(1000, 200);
+        sleep_ms(500);
+    }
+    
+    estado.modoBusca = false;
+    controlarLEDs(0, 255, 0);
+    atualizarDisplay("Monitoramento", "em Operacao");
+    clear_matrix();
+    enviarLog("Reconhecimento concluído");
+}
 
 int main()
 {
@@ -215,7 +240,12 @@ int main()
     init_adc();
 
     while (true) {
-        printf("Hello, world!\n");
-        sleep_ms(1000);
+        if (estado.sistemaAtivo) {
+            processarModoBusca();
+            monitorarJoystick();
+        }
+        sleep_ms(20);  // Delay para não sobrecarregar o processador
     }
+
+    return 0;
 }
