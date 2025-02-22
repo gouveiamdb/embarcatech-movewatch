@@ -39,6 +39,7 @@ typedef struct {
     bool modoBusca;
     bool movimentoDetectado;
     bool confirmacaoMovimento;
+    absolute_time_t tempoInicioAlarme;  // Usando o tipo correto do Pico SDK
 } EstadoSistema;
 
 // Variáveis globais
@@ -147,6 +148,19 @@ void tocarBuzzer(uint16_t frequencia, uint16_t duracao) {
     pwm_set_chan_level(pwm_slice_num, PWM_CHAN_A, 0);
 }
 
+// Função para verificar o timeout do alarme
+bool verificarTimeoutAlarme() {
+    if (!estado.movimentoDetectado || estado.confirmacaoMovimento) {
+        return false;
+    }
+    
+    // Verifica se passaram 10 segundos
+    absolute_time_t tempoAtual = get_absolute_time();
+    int64_t diferenca = absolute_time_diff_us(estado.tempoInicioAlarme, tempoAtual) / 1000;  // Converte para milissegundos
+    
+    return (diferenca >= 10000);  // 10 segundos em milissegundos
+}
+
 /**
  * Callback de interrupção para os botões
  * Atualiza o estado dos LEDs RGB
@@ -228,12 +242,22 @@ void monitorarJoystick() {
     if (pwm_x > 0 || pwm_y > 0) {
         if (!estado.movimentoDetectado) {
             estado.movimentoDetectado = true;
-            controlarLEDs(255, 0, 0);
+            estado.tempoInicioAlarme = get_absolute_time();  // Inicia o temporizador
+            controlarLEDs(255, 0, 0);  // Vermelho
             tocarBuzzer(2000, 500);
             atualizarDisplay("ALERTA!", "Objeto em movimento");
             display_pattern(padrao_x, 255, 0, 0);
             enviarLog("Movimentação detectada!");
         }
+    }
+    
+    // Verifica o timeout do alarme
+    if (verificarTimeoutAlarme()) {
+        estado.movimentoDetectado = false;
+        controlarLEDs(0, 255, 0);  // Verde
+        clear_matrix();
+        atualizarDisplay("Monitoramento", "em Operacao");
+        enviarLog("Alarme desativado por timeout");
     }
 }
 
