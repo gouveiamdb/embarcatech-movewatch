@@ -94,6 +94,12 @@ void init_gpio() {
     gpio_put(LED_BLUE, 0);
 }
 
+void init_adc() {
+    adc_init();
+    adc_gpio_init(JOYSTICK_X);
+    adc_gpio_init(JOYSTICK_Y);
+}
+
 /**
  * Callback de interrupção para os botões
  * Atualiza o estado dos LEDs RGB
@@ -144,6 +150,7 @@ int main()
 {
     stdio_init_all();
     init_gpio();
+    init_adc();
 
     while (true) {
         printf("Hello, world!\n");
