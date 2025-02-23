@@ -75,7 +75,7 @@ void init_pwm(void);
 void init_display(void);
 void init_uart(void);
 void ws2812_init(void);
-void atualizarDisplay(const char* linha1, const char* linha2);
+void atualizarDisplay(const char *mensagem);
 void controlarLEDs(uint8_t r, uint8_t g, uint8_t b);
 void tocarBuzzer(uint16_t frequencia, uint16_t duracao);
 void enviarLog(const char* mensagem);
@@ -158,9 +158,13 @@ void init_pwm() {
 }
 
 void init_display() {
+    init_i2c();
     ssd1306_init(&display, 128, 64, false, DISPLAY_ADDR, I2C_PORT);
-    ssd1306_clear(&display);
+    ssd1306_config(&display);
+    ssd1306_fill(&display, false);
     ssd1306_send_data(&display);
+
+    printf("Display SSD1306 inicializado com sucesso!\n");
 }
 
 void ws2812_init() {
@@ -219,10 +223,9 @@ bool verificarTimeoutAlarme() {
 }
 
 // Funções de interface
-void atualizarDisplay(const char* linha1, const char* linha2) {
-    ssd1306_clear(&display);
-    ssd1306_draw_string(&display, 0, 0, 1, linha1);
-    ssd1306_draw_string(&display, 0, 16, 1, linha2);
+void atualizarDisplay(const char *mensagem) {
+    ssd1306_fill(&display, false);
+    ssd1306_draw_string(&display, mensagem, 10, 25);
     ssd1306_send_data(&display);
 }
 
