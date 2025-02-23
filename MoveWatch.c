@@ -139,6 +139,11 @@ void init_pwm() {
     pwm_set_enabled(pwm_slice_num, true);
 }
 
+void init_display() {
+    ssd1306_init(&display, 128, 64, false, DISPLAY_ADDR, I2C_PORT);
+    ssd1306_clear(&display);
+    ssd1306_send_data(&display);
+}
 
 void tocarBuzzer(uint16_t frequencia, uint16_t duracao) {
     uint32_t wrap = clock_get_hz(clk_sys) / frequencia;
@@ -159,6 +164,20 @@ bool verificarTimeoutAlarme() {
     int64_t diferenca = absolute_time_diff_us(estado.tempoInicioAlarme, tempoAtual) / 1000;  // Converte para milissegundos
     
     return (diferenca >= 10000);  // 10 segundos em milissegundos
+}
+
+// Funções de interface
+void atualizarDisplay(const char* linha1, const char* linha2) {
+    ssd1306_clear(&display);
+    ssd1306_draw_string(&display, 0, 0, 1, linha1);
+    ssd1306_draw_string(&display, 0, 16, 1, linha2);
+    ssd1306_send_data(&display);
+}
+
+void controlarLEDs(uint8_t r, uint8_t g, uint8_t b) {
+    gpio_put(LED_RED, r > 0);
+    gpio_put(LED_GREEN, g > 0);
+    gpio_put(LED_BLUE, b > 0);
 }
 
 /**
@@ -295,6 +314,13 @@ int main()
     init_i2c();
     init_uart();
     init_pwm();
+    init_display();
+
+    // Mensagem inicial
+    printf("MoveWatch - Sistema Iniciado\nBaud Rate: %d\n", BAUD_RATE);
+    atualizarDisplay("Sistema", "Iniciando...");
+    clear_matrix();
+    sleep_ms(1000);
 
     while (true) {
         if (estado.sistemaAtivo) {
