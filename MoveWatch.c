@@ -145,6 +145,40 @@ void init_display() {
     ssd1306_send_data(&display);
 }
 
+void ws2812_init() {
+    uint offset = pio_add_program(ws2812_pio, &ws2812_program);
+    ws2812_program_init(ws2812_pio, ws2812_sm, offset, WS2812_PIN, 800000, false);
+}
+
+
+// Funções de controle da matriz WS2812
+void put_pixel(uint32_t pixel_grb) {
+    pio_sm_put_blocking(ws2812_pio, ws2812_sm, pixel_grb << 8u);
+}
+
+uint32_t rgb_to_grb(uint8_t r, uint8_t g, uint8_t b) {
+    return (g << 16) | (r << 8) | b;
+}
+
+void clear_matrix() {
+    for(int i = 0; i < NUM_PIXELS; i++) {
+        put_pixel(0);
+    }
+}
+
+void display_pattern(const uint8_t pattern[MATRIX_SIZE][MATRIX_SIZE], uint8_t r, uint8_t g, uint8_t b) {
+    uint32_t on_color = rgb_to_grb(r, g, b);
+    uint32_t off_color = rgb_to_grb(0, 0, 0);
+    
+    for (int y = 0; y < MATRIX_SIZE; y++) {
+        for (int x = 0; x < MATRIX_SIZE; x++) {
+            int x_pos = (y % 2 == 0) ? x : (MATRIX_SIZE - 1 - x);
+            int led_index = y * MATRIX_SIZE + x_pos;
+            put_pixel(pattern[y][x] ? on_color : off_color);
+        }
+    }
+}
+
 void tocarBuzzer(uint16_t frequencia, uint16_t duracao) {
     uint32_t wrap = clock_get_hz(clk_sys) / frequencia;
     pwm_set_wrap(pwm_slice_num, wrap);
@@ -365,6 +399,7 @@ int main()
     init_uart();
     init_pwm();
     init_display();
+    ws2812_init();
 
     const char* mensagensInicio[] = {
         "BitDogLab",
