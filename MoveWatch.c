@@ -274,7 +274,7 @@ void gpio_callback(uint gpio, uint32_t events) {
     if (gpio == BOTAO_A) {
         estado.sistemaAtivo = !estado.sistemaAtivo;
         if (estado.sistemaAtivo) {
-            controlarLEDs(0, 255, 0);
+            controlarLEDs(0, 64, 0);
             atualizarDisplay("Sistema em", "Funcionamento");
             clear_matrix();
             printf("Sistema ativado\n");
@@ -290,13 +290,13 @@ void gpio_callback(uint gpio, uint32_t events) {
     } else if (gpio == JOYSTICK_BTN && estado.movimentoDetectado) {
         if (!estado.confirmacaoMovimento) {
             estado.confirmacaoMovimento = true;
-            controlarLEDs(255, 255, 0);
+            controlarLEDs(64, 64, 0);
             atualizarDisplay("Confirmar", "movimentacão?");
             enviarLog("Aguardando confirmação...");
         } else {
             estado.movimentoDetectado = false;
             estado.confirmacaoMovimento = false;
-            controlarLEDs(0, 255, 0);
+            controlarLEDs(0, 64, 0);
             atualizarDisplay("Monitoramento", "em Operacao");
             clear_matrix();
             enviarLog("Movimentação confirmada!");
@@ -365,9 +365,9 @@ void monitorarJoystick() {
 
             exibirMensagensSequenciais(mensagensAlerta, 6, 800);  // 800ms por mensagem
             
-            controlarLEDs(255, 0, 0);  // LED vermelho
+            controlarLEDs(64, 0, 0);  // LED vermelho
             tocarBuzzer(2000, 500);
-            display_pattern(padrao_x, 255, 0, 0);
+            display_pattern(padrao_x, 64, 64, 0);
             enviarLog("Movimentação detectada!");
 
             atualizarDisplay("ALERTA!", "Objeto em movimento");
@@ -389,12 +389,12 @@ void joystick_callback() {
 
         if (confirmacoes == 1) {
             atualizarDisplay("Confirmar?", "Pressione Novamente");
-            controlarLEDs(255, 255, 0); // LED amarelo
+            controlarLEDs(64, 64, 0); // LED amarelo
             pararBuzzer();
         } 
         else if (confirmacoes == 2) {
             estado.movimentoDetectado = false;
-            controlarLEDs(0, 255, 0);  // Volta para verde
+            controlarLEDs(0, 64, 0);  // Volta para verde
             clear_matrix();
             atualizarDisplay("Monitoramento", "em Operacao");
             enviarLog("Movimentação confirmada pelo usuário");
@@ -424,8 +424,8 @@ void processarModoBusca() {
         atualizarDisplay("Reconhecendo", "ambiente...");
         
         for (int j = 0; j < 10; j++) {
-            controlarLEDs(0, 0, 255);
-            display_pattern(padrao_alerta, 0, 0, 255);
+            controlarLEDs(0, 0, 64);
+            display_pattern(padrao_alerta, 0, 0, 64);
             sleep_ms(100);
             controlarLEDs(0, 0, 0);
             clear_matrix();
