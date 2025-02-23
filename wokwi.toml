@@ -1,0 +1,4 @@
+[wokwi]
+version = 1
+firmware = 'MoveWatch.uf2'
+elf = 'MoveWatch.elf'
