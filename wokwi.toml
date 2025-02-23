@@ -1,4 +1,4 @@
 [wokwi]
 version = 1
-firmware = 'MoveWatch.hex'
-elf = 'MoveWatch.elf'
+firmware = 'build/MoveWatch.uf2'
+elf = 'build/MoveWatch.elf'
