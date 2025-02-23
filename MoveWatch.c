@@ -75,7 +75,6 @@ void init_pwm(void);
 void init_display(void);
 void init_uart(void);
 void ws2812_init(void);
-void atualizarDisplay(const char *mensagem1, const char *mensagem2);
 void controlarLEDs(uint8_t r, uint8_t g, uint8_t b);
 void gpio_callback(uint gpio, uint32_t events);
 void tocarBuzzer(uint16_t frequencia, uint16_t duracao);
@@ -85,6 +84,16 @@ void monitorarJoystick(void);
 void display_pattern(const uint8_t pattern[MATRIX_SIZE][MATRIX_SIZE], uint8_t r, uint8_t g, uint8_t b);
 void clear_matrix(void);
 uint16_t calculate_pwm(uint16_t value);
+bool verificarTimeoutAlarme(void);
+void exibirMensagensSequenciais(const char* mensagens[], int numMensagens, int tempoExibicao);
+
+
+void atualizarDisplay(const char *mensagem1, const char *mensagem2) {
+    ssd1306_fill(&display, false);
+    ssd1306_draw_string(&display, mensagem1, 10, 25);
+    ssd1306_draw_string(&display, mensagem2, 10, 45);
+    ssd1306_send_data(&display);
+}
 
 /**
  * Inicializa os pinos GPIO
@@ -224,13 +233,6 @@ bool verificarTimeoutAlarme() {
 }
 
 // Funções de interface
-void atualizarDisplay(const char *mensagem1, const char *mensagem2) {
-    ssd1306_fill(&display, false);
-    ssd1306_draw_string(&display, mensagem1, 10, 25);
-    ssd1306_draw_string(&display, mensagem2, 10, 25);
-    ssd1306_send_data(&display);
-}
-
 void controlarLEDs(uint8_t r, uint8_t g, uint8_t b) {
     gpio_put(LED_RED, r > 0);
     gpio_put(LED_GREEN, g > 0);
