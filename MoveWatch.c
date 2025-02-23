@@ -239,6 +239,10 @@ void controlarLEDs(uint8_t r, uint8_t g, uint8_t b) {
     gpio_put(LED_BLUE, b > 0);
 }
 
+void enviarLog(const char* mensagem) {
+    printf("[%lu] %s\n", time_us_32() / 1000000, mensagem);
+}
+
 /**
  * Callback de interrupção para os botões
  * Atualiza o estado dos LEDs RGB
