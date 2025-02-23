@@ -67,6 +67,24 @@ const uint8_t padrao_alerta[MATRIX_SIZE][MATRIX_SIZE] = {
     {0,1,1,1,0}
 };
 
+// Protótipos das funções
+void init_gpio(void);
+void init_adc(void);
+void init_i2c(void);
+void init_pwm(void);
+void init_display(void);
+void init_uart(void);
+void ws2812_init(void);
+void atualizarDisplay(const char* linha1, const char* linha2);
+void controlarLEDs(uint8_t r, uint8_t g, uint8_t b);
+void tocarBuzzer(uint16_t frequencia, uint16_t duracao);
+void enviarLog(const char* mensagem);
+void processarModoBusca(void);
+void monitorarJoystick(void);
+void display_pattern(const uint8_t pattern[MATRIX_SIZE][MATRIX_SIZE], uint8_t r, uint8_t g, uint8_t b);
+void clear_matrix(void);
+uint16_t calculate_pwm(uint16_t value);
+
 /**
  * Inicializa os pinos GPIO
  * Configura direção, pull-ups e interrupções para os pinos
