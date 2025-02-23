@@ -261,12 +261,26 @@ void monitorarJoystick() {
     if (pwm_x > 0 || pwm_y > 0) {
         if (!estado.movimentoDetectado) {
             estado.movimentoDetectado = true;
-            estado.tempoInicioAlarme = get_absolute_time();  // Inicia o temporizador
-            controlarLEDs(255, 0, 0);  // Vermelho
+            estado.tempoInicioAlarme = get_absolute_time();
+            
+            // Mensagens de alerta
+            const char* mensagensAlerta[] = {
+                "ALERTA!", 
+                "Movimento",
+                "Objeto em",
+                "Movimento",
+                "Aguardando",
+                "Confirmacao"
+            };
+            
+            exibirMensagensSequenciais(mensagensAlerta, 6, 800);  // 800ms por mensagem
+            
+            controlarLEDs(255, 0, 0);
             tocarBuzzer(2000, 500);
-            atualizarDisplay("ALERTA!", "Objeto em movimento");
             display_pattern(padrao_x, 255, 0, 0);
             enviarLog("Movimentação detectada!");
+            
+            atualizarDisplay("ALERTA!", "Objeto em movimento");
         }
     }
     
@@ -280,8 +294,32 @@ void monitorarJoystick() {
     }
 }
 
+// Função para exibir mensagens sequenciais com pausas
+void exibirMensagensSequenciais(const char* mensagens[], int numMensagens, int tempoExibicao) {
+    for (int i = 0; i < numMensagens; i += 2) {
+        // Exibe par de mensagens (duas linhas)
+        atualizarDisplay(mensagens[i], 
+                        (i + 1 < numMensagens) ? mensagens[i + 1] : "");
+        sleep_ms(tempoExibicao);
+    }
+}
+
+// No processarModoBusca:
 void processarModoBusca() {
     if (!estado.modoBusca) return;
+    
+    // Mensagens para o modo de busca
+    const char* mensagensBusca[] = {
+        "Iniciando", 
+        "Reconhecimento",
+        "Buscando", 
+        "Padroes...",
+        "Analisando", 
+        "Ambiente"
+    };
+    
+    // Exibe mensagens iniciais
+    exibirMensagensSequenciais(mensagensBusca, 6, 1000);  // 1 segundo por mensagem
     
     for (int i = 0; i < 5; i++) {
         atualizarDisplay("Reconhecendo", "ambiente...");
@@ -298,6 +336,18 @@ void processarModoBusca() {
         tocarBuzzer(1000, 200);
         sleep_ms(500);
     }
+    
+    // Mensagens de conclusão
+    const char* mensagensConclusao[] = {
+        "Busca", 
+        "Concluida",
+        "Iniciando",
+        "Monitoramento",
+        "Sistema",
+        "Operacional"
+    };
+    
+    exibirMensagensSequenciais(mensagensConclusao, 6, 1000);
     
     estado.modoBusca = false;
     controlarLEDs(0, 255, 0);
@@ -316,11 +366,18 @@ int main()
     init_pwm();
     init_display();
 
-    // Mensagem inicial
-    printf("MoveWatch - Sistema Iniciado\nBaud Rate: %d\n", BAUD_RATE);
-    atualizarDisplay("Sistema", "Iniciando...");
-    clear_matrix();
-    sleep_ms(1000);
+    const char* mensagensInicio[] = {
+        "BitDogLab",
+        "MoveWatch",
+        "Iniciando",
+        "Sistema",
+        "Carregando",
+        "Configuracoes",
+        "Sistema",
+        "Pronto!"
+    };
+    
+    exibirMensagensSequenciais(mensagensInicio, 8, 1000);
 
     while (true) {
         if (estado.sistemaAtivo) {
