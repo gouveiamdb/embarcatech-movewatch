@@ -75,8 +75,9 @@ void init_pwm(void);
 void init_display(void);
 void init_uart(void);
 void ws2812_init(void);
-void atualizarDisplay(const char *mensagem);
+void atualizarDisplay(const char *mensagem1, const char *mensagem2);
 void controlarLEDs(uint8_t r, uint8_t g, uint8_t b);
+void gpio_callback(uint gpio, uint32_t events);
 void tocarBuzzer(uint16_t frequencia, uint16_t duracao);
 void enviarLog(const char* mensagem);
 void processarModoBusca(void);
@@ -223,9 +224,10 @@ bool verificarTimeoutAlarme() {
 }
 
 // Funções de interface
-void atualizarDisplay(const char *mensagem) {
+void atualizarDisplay(const char *mensagem1, const char *mensagem2) {
     ssd1306_fill(&display, false);
-    ssd1306_draw_string(&display, mensagem, 10, 25);
+    ssd1306_draw_string(&display, mensagem1, 10, 25);
+    ssd1306_draw_string(&display, mensagem2, 10, 25);
     ssd1306_send_data(&display);
 }
 
