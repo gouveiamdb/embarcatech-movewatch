@@ -32,6 +32,8 @@
 #define MATRIX_SIZE     5     // Tamanho da matriz de LEDs
 #define NUM_PIXELS      25    // Total de LEDs na matriz (5x5)
 #define DEBOUNCE_DELAY  200   // Tempo de debounce em ms
+#define CENTRO_JOYSTICK 2048
+#define MARGEM_MOVIMENTO 2000  // 50% da escala ADC de 12 bits
 
 // Variáveis globais para controle de estado
 typedef struct {
@@ -87,11 +89,19 @@ uint16_t calculate_pwm(uint16_t value);
 bool verificarTimeoutAlarme(void);
 void exibirMensagensSequenciais(const char* mensagens[], int numMensagens, int tempoExibicao);
 
+void draw_double_rect(ssd1306_t *ssd, uint8_t x, uint8_t y, uint8_t width, uint8_t height) {
+    ssd1306_rect(ssd, x, y, width, height, true, false);
+    if (width > 4 && height > 4) {
+        ssd1306_rect(ssd, x + 2, y + 2, width - 4, height - 4, true, false);
+    }
+}
 
 void atualizarDisplay(const char *mensagem1, const char *mensagem2) {
-    ssd1306_fill(&display, false);
-    ssd1306_draw_string(&display, mensagem1, 10, 25);
-    ssd1306_draw_string(&display, mensagem2, 10, 45);
+    ssd1306_fill(&display, false); //Limpa Tela
+    draw_double_rect(&display, 0, 0, 128, 64);
+
+    ssd1306_draw_string(&display, mensagem1, 10, 20);
+    ssd1306_draw_string(&display, mensagem2, 10, 35);
     ssd1306_send_data(&display);
 }
 
@@ -214,9 +224,9 @@ void display_pattern(const uint8_t pattern[MATRIX_SIZE][MATRIX_SIZE], uint8_t r,
 void tocarBuzzer(uint16_t frequencia, uint16_t duracao) {
     uint32_t wrap = clock_get_hz(clk_sys) / frequencia;
     pwm_set_wrap(pwm_slice_num, wrap);
-    pwm_set_chan_level(pwm_slice_num, PWM_CHAN_A, wrap / 2);
+    pwm_set_chan_level(pwm_slice_num, PWM_CHAN_A, wrap / 4);
     sleep_ms(duracao);
-    pwm_set_chan_level(pwm_slice_num, PWM_CHAN_A, 0);
+    pwm_set_chan_level(pwm_slice_num, PWM_CHAN_A, 2);
 }
 
 // Função para verificar o timeout do alarme
@@ -276,15 +286,15 @@ void gpio_callback(uint gpio, uint32_t events) {
         if (!estado.confirmacaoMovimento) {
             estado.confirmacaoMovimento = true;
             controlarLEDs(255, 255, 0);
-            atualizarDisplay("Confirmar", "movimentacao?");
-            enviarLog("Aguardando confirmação");
+            atualizarDisplay("Confirmar", "movimentacão?");
+            enviarLog("Aguardando confirmação...");
         } else {
             estado.movimentoDetectado = false;
             estado.confirmacaoMovimento = false;
             controlarLEDs(0, 255, 0);
             atualizarDisplay("Monitoramento", "em Operacao");
             clear_matrix();
-            enviarLog("Movimentação confirmada");
+            enviarLog("Movimentação confirmada!");
         }
     }
 }
@@ -292,7 +302,7 @@ void gpio_callback(uint gpio, uint32_t events) {
 // Funções de processamento
 uint16_t calculate_pwm(uint16_t value) {
     const uint16_t center = 2048;
-    const uint16_t deadzone = 210;
+    const uint16_t deadzone = 1000;
     
     int32_t diff = abs((int32_t)value - center);
     
@@ -323,19 +333,21 @@ void exibirMensagensSequenciais(const char* mensagens[], int numMensagens, int t
 void monitorarJoystick() {
     if (!estado.sistemaAtivo || estado.modoBusca) return;
     
+    // Ler valores do Joystick
     adc_select_input(0);
     uint16_t x = adc_read();
     adc_select_input(1);
     uint16_t y = adc_read();
-    
-    uint16_t pwm_x = calculate_pwm(x);
-    uint16_t pwm_y = calculate_pwm(y);
-    
-    if (pwm_x > 0 || pwm_y > 0) {
+
+    // Verifica se o movimento ultrapassa a zona morta
+    bool movimentoX = (x < (CENTRO_JOYSTICK - MARGEM_MOVIMENTO)) || (x > (CENTRO_JOYSTICK + MARGEM_MOVIMENTO));
+    bool movimentoY = (y < (CENTRO_JOYSTICK - MARGEM_MOVIMENTO)) || (y > (CENTRO_JOYSTICK + MARGEM_MOVIMENTO));
+
+    if (movimentoX || movimentoY) {
         if (!estado.movimentoDetectado) {
             estado.movimentoDetectado = true;
             estado.tempoInicioAlarme = get_absolute_time();
-            
+
             // Mensagens de alerta
             const char* mensagensAlerta[] = {
                 "ALERTA!", 
@@ -345,27 +357,28 @@ void monitorarJoystick() {
                 "Aguardando",
                 "Confirmacao"
             };
-            
+
             exibirMensagensSequenciais(mensagensAlerta, 6, 800);  // 800ms por mensagem
             
-            controlarLEDs(255, 0, 0);
+            controlarLEDs(255, 0, 0);  // LED vermelho
             tocarBuzzer(2000, 500);
             display_pattern(padrao_x, 255, 0, 0);
-            enviarLog("Movimentação detectada!");
-            
+            enviarLog("Movimentacao detectada!");
+
             atualizarDisplay("ALERTA!", "Objeto em movimento");
         }
     }
-    
+
     // Verifica o timeout do alarme
     if (verificarTimeoutAlarme()) {
         estado.movimentoDetectado = false;
-        controlarLEDs(0, 255, 0);  // Verde
+        controlarLEDs(0, 255, 0);  // LED verde
         clear_matrix();
         atualizarDisplay("Monitoramento", "em Operacao");
         enviarLog("Alarme desativado por timeout");
     }
 }
+
 
 // No processarModoBusca:
 void processarModoBusca() {
@@ -407,7 +420,7 @@ void processarModoBusca() {
         "Iniciando",
         "Monitoramento",
         "Sistema",
-        "Operacional"
+        "Pronto"
     };
     
     exibirMensagensSequenciais(mensagensConclusao, 6, 1000);
@@ -416,7 +429,7 @@ void processarModoBusca() {
     controlarLEDs(0, 255, 0);
     atualizarDisplay("Monitoramento", "em Operacao");
     clear_matrix();
-    enviarLog("Reconhecimento concluído");
+    enviarLog("Reconhecimento concluido");
 }
 
 int main()
@@ -438,10 +451,12 @@ int main()
         "Carregando",
         "Configuracoes",
         "Sistema",
-        "Pronto!"
+        "Pronto",
+        "Pressione",
+        "BOTAO A"
     };
     
-    exibirMensagensSequenciais(mensagensInicio, 8, 1000);
+    exibirMensagensSequenciais(mensagensInicio, 10, 1000);
 
     while (true) {
         if (estado.sistemaAtivo) {
