@@ -299,6 +299,16 @@ uint16_t calculate_pwm(uint16_t value) {
     return (uint16_t)pwm;
 }
 
+// Função para exibir mensagens sequenciais com pausas
+void exibirMensagensSequenciais(const char* mensagens[], int numMensagens, int tempoExibicao) {
+    for (int i = 0; i < numMensagens; i += 2) {
+        // Exibe par de mensagens (duas linhas)
+        atualizarDisplay(mensagens[i], 
+                        (i + 1 < numMensagens) ? mensagens[i + 1] : "");
+        sleep_ms(tempoExibicao);
+    }
+}
+
 void monitorarJoystick() {
     if (!estado.sistemaAtivo || estado.modoBusca) return;
     
@@ -343,16 +353,6 @@ void monitorarJoystick() {
         clear_matrix();
         atualizarDisplay("Monitoramento", "em Operacao");
         enviarLog("Alarme desativado por timeout");
-    }
-}
-
-// Função para exibir mensagens sequenciais com pausas
-void exibirMensagensSequenciais(const char* mensagens[], int numMensagens, int tempoExibicao) {
-    for (int i = 0; i < numMensagens; i += 2) {
-        // Exibe par de mensagens (duas linhas)
-        atualizarDisplay(mensagens[i], 
-                        (i + 1 < numMensagens) ? mensagens[i + 1] : "");
-        sleep_ms(tempoExibicao);
     }
 }
 

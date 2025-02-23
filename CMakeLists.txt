@@ -64,6 +64,7 @@ target_link_libraries(MoveWatch
         hardware_adc
         hardware_i2c
         hardware_pwm
+        hardware_uart
         )
 
 pico_add_extra_outputs(MoveWatch)
