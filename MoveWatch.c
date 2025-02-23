@@ -80,6 +80,7 @@ void ws2812_init(void);
 void controlarLEDs(uint8_t r, uint8_t g, uint8_t b);
 void gpio_callback(uint gpio, uint32_t events);
 void tocarBuzzer(uint16_t frequencia, uint16_t duracao);
+void pararBuzzer(void);
 void enviarLog(const char* mensagem);
 void processarModoBusca(void);
 void monitorarJoystick(void);
@@ -92,9 +93,13 @@ void exibirMensagensSequenciais(const char* mensagens[], int numMensagens, int t
 void draw_double_rect(ssd1306_t *ssd, uint8_t x, uint8_t y, uint8_t width, uint8_t height) {
     ssd1306_rect(ssd, x, y, width, height, true, false);
     if (width > 4 && height > 4) {
-        ssd1306_rect(ssd, x + 2, y + 2, width - 4, height - 4, true, false);
     }
 }
+
+void pararBuzzer(void) {
+    pwm_set_chan_level(pwm_slice_num, PWM_CHAN_A, 0);
+}
+
 
 void atualizarDisplay(const char *mensagem1, const char *mensagem2) {
     ssd1306_fill(&display, false); //Limpa Tela
@@ -363,22 +368,40 @@ void monitorarJoystick() {
             controlarLEDs(255, 0, 0);  // LED vermelho
             tocarBuzzer(2000, 500);
             display_pattern(padrao_x, 255, 0, 0);
-            enviarLog("Movimentacao detectada!");
+            enviarLog("Movimentação detectada!");
 
             atualizarDisplay("ALERTA!", "Objeto em movimento");
         }
     }
 
-    // Verifica o timeout do alarme
+    // Apenas desativa o buzzer após o timeout, mas mantém LEDs acesos
     if (verificarTimeoutAlarme()) {
-        estado.movimentoDetectado = false;
-        controlarLEDs(0, 255, 0);  // LED verde
-        clear_matrix();
-        atualizarDisplay("Monitoramento", "em Operacao");
-        enviarLog("Alarme desativado por timeout");
+        pararBuzzer();  // Apenas o buzzer é desativado
+        enviarLog("Buzzer desativado por timeout");
     }
 }
 
+void joystick_callback() {
+    static int confirmacoes = 0;
+
+    if (estado.movimentoDetectado) {
+        confirmacoes++;
+
+        if (confirmacoes == 1) {
+            atualizarDisplay("Confirmar?", "Pressione Novamente");
+            controlarLEDs(255, 255, 0); // LED amarelo
+            pararBuzzer();
+        } 
+        else if (confirmacoes == 2) {
+            estado.movimentoDetectado = false;
+            controlarLEDs(0, 255, 0);  // Volta para verde
+            clear_matrix();
+            atualizarDisplay("Monitoramento", "em Operacao");
+            enviarLog("Movimentação confirmada pelo usuário");
+            confirmacoes = 0;  // Reseta contador
+        }
+    }
+}
 
 // No processarModoBusca:
 void processarModoBusca() {
