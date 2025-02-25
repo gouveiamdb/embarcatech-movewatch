@@ -4,6 +4,8 @@
  * 
  * Sistema que monitora a movimentação de objetos usando joystick
  * e fornece alertas visuais e sonoros quando detecta movimento.
+ * 
+ * Autor: Matheus Gouveia
  */
 
 // Inclusão de bibliotecas
