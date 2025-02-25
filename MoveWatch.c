@@ -1,3 +1,12 @@
+/*
+ * MoveWatch - Sistema de monitoramento de movimentação
+ * Implementação para BitDogLab
+ * 
+ * Sistema que monitora a movimentação de objetos usando joystick
+ * e fornece alertas visuais e sonoros quando detecta movimento.
+ */
+
+// Inclusão de bibliotecas
 #include <stdio.h>
 #include <stdlib.h>
 #include "pico/stdlib.h"
@@ -9,6 +18,10 @@
 #include "inc/font.h"
 #include "hardware/pwm.h"
 #include "ws2812.pio.h"
+
+//===========================================================================
+// Definições e Constantes
+//===========================================================================
 
 // Definições dos pinos GPIO
 #define BOTAO_A         5     // GPIO 5  - Liga/Desliga
@@ -25,6 +38,8 @@
 #define I2C_SCL         15    // GPIO 15 - Display I2C (SCL)
 #define UART_TX         16    // GPIO 16 - UART TX
 #define UART_RX         17    // GPIO 17 - UART RX
+
+// Configurações de hardware
 #define I2C_PORT        i2c1  // Porta I2C utilizada
 #define UART_ID         uart0 // UART ID
 #define DISPLAY_ADDR    0x3C  // Endereço I2C do display OLED
@@ -32,10 +47,14 @@
 #define MATRIX_SIZE     5     // Tamanho da matriz de LEDs
 #define NUM_PIXELS      25    // Total de LEDs na matriz (5x5)
 #define DEBOUNCE_DELAY  200   // Tempo de debounce em ms
-#define CENTRO_JOYSTICK 2048
-#define MARGEM_MOVIMENTO 2000  // 50% da escala ADC de 12 bits
+#define CENTRO_JOYSTICK 2048  // Valor central do ADC (12 bits)
+#define MARGEM_MOVIMENTO 2000 // 50% da escala ADC de 12 bits
 
-// Variáveis globais para controle de estado
+//===========================================================================
+// Estruturas e Variáveis Globais
+//===========================================================================
+
+// Estrutura de estado do sistema
 typedef struct {
     bool sistemaAtivo;
     bool modoBusca;
@@ -69,7 +88,11 @@ const uint8_t padrao_alerta[MATRIX_SIZE][MATRIX_SIZE] = {
     {0,1,1,1,0}
 };
 
+//===========================================================================
 // Protótipos das funções
+//===========================================================================
+
+// Funções de inicialização
 void init_gpio(void);
 void init_adc(void);
 void init_i2c(void);
@@ -77,43 +100,42 @@ void init_pwm(void);
 void init_display(void);
 void init_uart(void);
 void ws2812_init(void);
+
+// Funções de controle de hardware
 void controlarLEDs(uint8_t r, uint8_t g, uint8_t b);
-void gpio_callback(uint gpio, uint32_t events);
 void tocarBuzzer(uint16_t frequencia, uint16_t duracao);
 void pararBuzzer(void);
-void enviarLog(const char* mensagem);
-void processarModoBusca(void);
-void monitorarJoystick(void);
-void display_pattern(const uint8_t pattern[MATRIX_SIZE][MATRIX_SIZE], uint8_t r, uint8_t g, uint8_t b);
+void atualizarDisplay(const char *mensagem1, const char *mensagem2);
+void draw_double_rect(ssd1306_t *ssd, uint8_t x, uint8_t y, uint8_t width, uint8_t height);
+
+// Funções para matriz de LEDs
+void put_pixel(uint32_t pixel_grb);
+uint32_t rgb_to_grb(uint8_t r, uint8_t g, uint8_t b);
 void clear_matrix(void);
+void display_pattern(const uint8_t pattern[MATRIX_SIZE][MATRIX_SIZE], uint8_t r, uint8_t g, uint8_t b);
+
+// Funções de processamento
 uint16_t calculate_pwm(uint16_t value);
-bool verificarTimeoutAlarme(void);
+uint16_t lerJoystickSuavizado(uint adc);
 void exibirMensagensSequenciais(const char* mensagens[], int numMensagens, int tempoExibicao);
 
-void draw_double_rect(ssd1306_t *ssd, uint8_t x, uint8_t y, uint8_t width, uint8_t height) {
-    ssd1306_rect(ssd, x, y, width, height, true, false);
-    if (width > 4 && height > 4) {
-    }
-}
 
-void pararBuzzer(void) {
-    pwm_set_chan_level(pwm_slice_num, PWM_CHAN_A, 0);
-}
+// Funções de callback e tratamento de eventos
+void gpio_callback(uint gpio, uint32_t events);
+void joystick_callback(void);
 
+// Funções de operação principal
+void configurarTempoAlarme(void);
+void processarModoBusca(void);
+void monitorarJoystick(void);
+void verificarBotoes(void);
+void verificarBotoesAntesDeIniciar(void);
 
-void atualizarDisplay(const char *mensagem1, const char *mensagem2) {
-    ssd1306_fill(&display, false); //Limpa Tela
-    draw_double_rect(&display, 0, 0, 128, 64);
+//===========================================================================
+// Funções de Inicialização
+//===========================================================================
 
-    ssd1306_draw_string(&display, mensagem1, 10, 20);
-    ssd1306_draw_string(&display, mensagem2, 10, 35);
-    ssd1306_send_data(&display);
-}
-
-/**
- * Inicializa os pinos GPIO
- * Configura direção, pull-ups e interrupções para os pinos
- */
+// Inicializa os pinos GPIO
 void init_gpio() {
     // 1. Inicialização dos pinos de entrada (Botões)
     gpio_init(BOTAO_A);        // GPIO 5  - Botão Liga/Desliga
@@ -155,18 +177,21 @@ void init_gpio() {
     gpio_put(LED_BLUE, 0);
 }
 
+// Inicializa o conversor ADC
 void init_adc() {
     adc_init();
     adc_gpio_init(JOYSTICK_X);
     adc_gpio_init(JOYSTICK_Y);
 }
 
+// Inicializa a comunicação UART
 void init_uart() {
     uart_init(UART_ID, BAUD_RATE);
     gpio_set_function(UART_TX, GPIO_FUNC_UART);
     gpio_set_function(UART_RX, GPIO_FUNC_UART);
 }
 
+// Inicializa a comunicação I2C
 void init_i2c() {
     i2c_init(I2C_PORT, 400 * 1000);  // 400kHz
     gpio_set_function(I2C_SDA, GPIO_FUNC_I2C);
@@ -175,6 +200,7 @@ void init_i2c() {
     gpio_pull_up(I2C_SCL);
 }
 
+// Inicializa o PWM para o buzzer
 void init_pwm() {
     gpio_set_function(BUZZER, GPIO_FUNC_PWM);
     pwm_slice_num = pwm_gpio_to_slice_num(BUZZER);
@@ -182,6 +208,7 @@ void init_pwm() {
     pwm_set_enabled(pwm_slice_num, true);
 }
 
+// Inicializa o display OLED
 void init_display() {
     init_i2c();
     ssd1306_init(&display, 128, 64, false, DISPLAY_ADDR, I2C_PORT);
@@ -192,27 +219,72 @@ void init_display() {
     printf("Display SSD1306 inicializado com sucesso!\n");
 }
 
+// Inicializa a matriz de LEDs WS2812
 void ws2812_init() {
     uint offset = pio_add_program(ws2812_pio, &ws2812_program);
     ws2812_program_init(ws2812_pio, ws2812_sm, offset, WS2812_PIN, 800000, false);
 }
 
+//===========================================================================
+// Funções de Controle de Hardware
+//===========================================================================
 
-// Funções de controle da matriz WS2812
+// Controla os LEDs RGB
+void controlarLEDs(uint8_t r, uint8_t g, uint8_t b) {
+    gpio_put(LED_RED, r > 0);
+    gpio_put(LED_GREEN, g > 0);
+    gpio_put(LED_BLUE, b > 0);
+}
+
+// Toca o buzzer com frequência e duração específicas
+void tocarBuzzer(uint16_t frequencia, uint16_t duracao) {
+    uint32_t wrap = clock_get_hz(clk_sys) / frequencia;
+    pwm_set_wrap(pwm_slice_num, wrap);
+    pwm_set_chan_level(pwm_slice_num, PWM_CHAN_A, wrap / 4);
+    sleep_ms(duracao);
+    pwm_set_chan_level(pwm_slice_num, PWM_CHAN_A, 2);
+}
+
+// Desenha um retângulo duplo no display
+void draw_double_rect(ssd1306_t *ssd, uint8_t x, uint8_t y, uint8_t width, uint8_t height) {
+    ssd1306_rect(ssd, x, y, width, height, true, false);
+    if (width > 4 && height > 4) {
+        // Opcional: desenhar um retângulo interno
+    }
+}
+
+// Atualiza o display com duas linhas de texto
+void atualizarDisplay(const char *mensagem1, const char *mensagem2) {
+    ssd1306_fill(&display, false); //Limpa Tela
+    draw_double_rect(&display, 0, 0, 128, 64);
+
+    ssd1306_draw_string(&display, mensagem1, 10, 20);
+    ssd1306_draw_string(&display, mensagem2, 10, 35);
+    ssd1306_send_data(&display);
+}
+
+//===========================================================================
+// Funções para Matriz de LEDs
+//===========================================================================
+
+// Envia um pixel para a matriz
 void put_pixel(uint32_t pixel_grb) {
     pio_sm_put_blocking(ws2812_pio, ws2812_sm, pixel_grb << 8u);
 }
 
+// Converte RGB para o formato GRB usado pelo WS2812
 uint32_t rgb_to_grb(uint8_t r, uint8_t g, uint8_t b) {
     return (g << 16) | (r << 8) | b;
 }
 
+// Limpa a matriz de LEDs
 void clear_matrix() {
     for(int i = 0; i < NUM_PIXELS; i++) {
         put_pixel(0);
     }
 }
 
+// Exibe um padrão na matriz de LEDs
 void display_pattern(const uint8_t pattern[MATRIX_SIZE][MATRIX_SIZE], uint8_t r, uint8_t g, uint8_t b) {
     uint32_t on_color = rgb_to_grb(r, g, b);
     uint32_t off_color = rgb_to_grb(0, 0, 0);
@@ -226,42 +298,61 @@ void display_pattern(const uint8_t pattern[MATRIX_SIZE][MATRIX_SIZE], uint8_t r,
     }
 }
 
-void tocarBuzzer(uint16_t frequencia, uint16_t duracao) {
-    uint32_t wrap = clock_get_hz(clk_sys) / frequencia;
-    pwm_set_wrap(pwm_slice_num, wrap);
-    pwm_set_chan_level(pwm_slice_num, PWM_CHAN_A, wrap / 4);
-    sleep_ms(duracao);
-    pwm_set_chan_level(pwm_slice_num, PWM_CHAN_A, 2);
-}
+//===========================================================================
+// Funções de Processamento
+//===========================================================================
 
-// Função para verificar o timeout do alarme
-bool verificarTimeoutAlarme() {
-    if (!estado.movimentoDetectado || estado.confirmacaoMovimento) {
-        return false;
+// Calcula o valor PWM baseado no valor do ADC
+uint16_t calculate_pwm(uint16_t value) {
+    const uint16_t center = 2048;
+    const uint16_t deadzone = 1000;
+    
+    int32_t diff = abs((int32_t)value - center);
+    
+    if (diff < deadzone) {
+        return 0;
     }
     
-    // Verifica se passaram 10 segundos
-    absolute_time_t tempoAtual = get_absolute_time();
-    int64_t diferenca = absolute_time_diff_us(estado.tempoInicioAlarme, tempoAtual) / 1000;  // Converte para milissegundos
+    diff -= deadzone;
+    uint32_t pwm = (diff * 4095) / (2048 - deadzone);
     
-    return (diferenca >= 10000);  // 10 segundos em milissegundos
+    if (pwm > 4095) {
+        pwm = 4095;
+    }
+    
+    return (uint16_t)pwm;
 }
 
-// Funções de interface
-void controlarLEDs(uint8_t r, uint8_t g, uint8_t b) {
-    gpio_put(LED_RED, r > 0);
-    gpio_put(LED_GREEN, g > 0);
-    gpio_put(LED_BLUE, b > 0);
+// Exibe uma sequência de mensagens no display
+void exibirMensagensSequenciais(const char* mensagens[], int numMensagens, int tempoExibicao) {
+    for (int i = 0; i < numMensagens; i += 2) {
+        // Exibe par de mensagens (duas linhas)
+        atualizarDisplay(mensagens[i], 
+                        (i + 1 < numMensagens) ? mensagens[i + 1] : "");
+        sleep_ms(tempoExibicao);
+    }
 }
 
-void enviarLog(const char* mensagem) {
-    printf("[%lu] %s\n", time_us_32() / 1000000, mensagem);
+
+// Envia logs para a UART
+void enviarLog(const char* formato, ...) {
+    char buffer[256]; // Buffer para a mensagem formatada
+    va_list args;
+    
+    // Processar argumentos variáveis como printf
+    va_start(args, formato);
+    vsnprintf(buffer, sizeof(buffer) - 1, formato, args);
+    va_end(args);
+    
+    // Enviar para a UART com timestamp
+    printf("[%lu] %s\n", time_us_32() / 1000000, buffer);
 }
 
-/**
- * Callback de interrupção para os botões
- * Atualiza o estado dos LEDs RGB
- */
+//===========================================================================
+// Funções de Callback e Tratamento de Eventos
+//===========================================================================
+
+// Callback para interrupções GPIO
 void gpio_callback(uint gpio, uint32_t events) {
     uint32_t current_time = to_ms_since_boot(get_absolute_time());
     
@@ -304,37 +395,89 @@ void gpio_callback(uint gpio, uint32_t events) {
     }
 }
 
-// Funções de processamento
-uint16_t calculate_pwm(uint16_t value) {
-    const uint16_t center = 2048;
-    const uint16_t deadzone = 1000;
-    
-    int32_t diff = abs((int32_t)value - center);
-    
-    if (diff < deadzone) {
-        return 0;
-    }
-    
-    diff -= deadzone;
-    uint32_t pwm = (diff * 4095) / (2048 - deadzone);
-    
-    if (pwm > 4095) {
-        pwm = 4095;
-    }
-    
-    return (uint16_t)pwm;
-}
 
-// Função para exibir mensagens sequenciais com pausas
-void exibirMensagensSequenciais(const char* mensagens[], int numMensagens, int tempoExibicao) {
-    for (int i = 0; i < numMensagens; i += 2) {
-        // Exibe par de mensagens (duas linhas)
-        atualizarDisplay(mensagens[i], 
-                        (i + 1 < numMensagens) ? mensagens[i + 1] : "");
-        sleep_ms(tempoExibicao);
+// Callback específico para o botão do joystick
+void joystick_callback() {
+    static int confirmacoes = 0;
+
+    if (estado.movimentoDetectado) {
+        confirmacoes++;
+
+        if (confirmacoes == 1) {
+            atualizarDisplay("Confirmar?", "Pressione Novamente");
+            controlarLEDs(64, 64, 0); // LED amarelo
+            pararBuzzer();
+        } 
+        else if (confirmacoes == 2) {
+            estado.movimentoDetectado = false;
+            controlarLEDs(0, 64, 0);  // Volta para verde
+            clear_matrix();
+            atualizarDisplay("Monitoramento", "em Operacao");
+            enviarLog("Movimentação confirmada pelo usuário");
+            confirmacoes = 0;  // Reseta contador
+        }
     }
 }
 
+//===========================================================================
+// Funções de Operação Principal
+//===========================================================================
+
+// Processa o modo de busca/reconhecimento do ambiente
+void processarModoBusca() {
+    if (!estado.modoBusca) return;
+    
+    enviarLog("Iniciando reconhecimento de ambiente");
+    
+    // Mensagens para o modo de busca
+    const char* mensagensBusca[] = {
+        "Iniciando", 
+        "Reconhecimento",
+        "Buscando", 
+        "Padroes...",
+        "Analisando", 
+        "Ambiente"
+    };
+    
+    // Exibe mensagens iniciais
+    exibirMensagensSequenciais(mensagensBusca, 6, 1000);  // 1 segundo por mensagem
+    
+    for (int i = 0; i < 5; i++) {
+        atualizarDisplay("Reconhecendo", "ambiente...");
+        
+        for (int j = 0; j < 10; j++) {
+            controlarLEDs(0, 0, 64);
+            display_pattern(padrao_alerta, 0, 0, 64);
+            sleep_ms(100);
+            controlarLEDs(0, 0, 0);
+            clear_matrix();
+            sleep_ms(100);
+        }
+        
+        tocarBuzzer(1000, 200);
+        sleep_ms(500);
+    }
+    
+    // Mensagens de conclusão
+    const char* mensagensConclusao[] = {
+        "Busca", 
+        "Concluida",
+        "Iniciando",
+        "Monitoramento",
+        "Sistema",
+        "Pronto"
+    };
+    
+    exibirMensagensSequenciais(mensagensConclusao, 6, 1000);
+    
+    estado.modoBusca = false;
+    controlarLEDs(0, 64, 0);  // Verde com intensidade menor
+    atualizarDisplay("Monitoramento", "em Operacao");
+    clear_matrix();
+    enviarLog("Reconhecimento concluido");
+}
+
+// Monitora o joystick para detectar movimento
 void monitorarJoystick() {
     if (!estado.sistemaAtivo || estado.modoBusca) return;
     
@@ -381,91 +524,26 @@ void monitorarJoystick() {
     }
 }
 
-void joystick_callback() {
-    static int confirmacoes = 0;
+//===========================================================================
+// Função Principal
+//===========================================================================
 
-    if (estado.movimentoDetectado) {
-        confirmacoes++;
-
-        if (confirmacoes == 1) {
-            atualizarDisplay("Confirmar?", "Pressione Novamente");
-            controlarLEDs(64, 64, 0); // LED amarelo
-            pararBuzzer();
-        } 
-        else if (confirmacoes == 2) {
-            estado.movimentoDetectado = false;
-            controlarLEDs(0, 64, 0);  // Volta para verde
-            clear_matrix();
-            atualizarDisplay("Monitoramento", "em Operacao");
-            enviarLog("Movimentação confirmada pelo usuário");
-            confirmacoes = 0;  // Reseta contador
-        }
-    }
-}
-
-// No processarModoBusca:
-void processarModoBusca() {
-    if (!estado.modoBusca) return;
-    
-    // Mensagens para o modo de busca
-    const char* mensagensBusca[] = {
-        "Iniciando", 
-        "Reconhecimento",
-        "Buscando", 
-        "Padroes...",
-        "Analisando", 
-        "Ambiente"
-    };
-    
-    // Exibe mensagens iniciais
-    exibirMensagensSequenciais(mensagensBusca, 6, 1000);  // 1 segundo por mensagem
-    
-    for (int i = 0; i < 5; i++) {
-        atualizarDisplay("Reconhecendo", "ambiente...");
-        
-        for (int j = 0; j < 10; j++) {
-            controlarLEDs(0, 0, 64);
-            display_pattern(padrao_alerta, 0, 0, 64);
-            sleep_ms(100);
-            controlarLEDs(0, 0, 0);
-            clear_matrix();
-            sleep_ms(100);
-        }
-        
-        tocarBuzzer(1000, 200);
-        sleep_ms(500);
-    }
-    
-    // Mensagens de conclusão
-    const char* mensagensConclusao[] = {
-        "Busca", 
-        "Concluida",
-        "Iniciando",
-        "Monitoramento",
-        "Sistema",
-        "Pronto"
-    };
-    
-    exibirMensagensSequenciais(mensagensConclusao, 6, 1000);
-    
-    estado.modoBusca = false;
-    controlarLEDs(0, 255, 0);
-    atualizarDisplay("Monitoramento", "em Operacao");
-    clear_matrix();
-    enviarLog("Reconhecimento concluido");
-}
-
-int main()
-{
+int main() {
     stdio_init_all();
-    init_gpio();
+    
+    // Inicialização de hardware
+    init_gpio();  
     init_adc();
     init_i2c();
     init_uart();
     init_pwm();
     init_display();
     ws2812_init();
-
+       
+    // Mensagem de inicialização do sistema
+    enviarLog("Sistema MoveWatch iniciando...");
+    
+    // Exibir mensagens de inicialização
     const char* mensagensInicio[] = {
         "BitDogLab",
         "MoveWatch",
@@ -475,12 +553,11 @@ int main()
         "Configuracoes",
         "Sistema",
         "Pronto",
-        "Pressione",
-        "BOTAO A"
+        "Botao A = Liga/Desl."
     };
-    
-    exibirMensagensSequenciais(mensagensInicio, 10, 1000);
+    exibirMensagensSequenciais(mensagensInicio, 8, 1000);
 
+    // Loop principal
     while (true) {
         if (estado.sistemaAtivo) {
             processarModoBusca();
