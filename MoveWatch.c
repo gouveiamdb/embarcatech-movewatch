@@ -245,6 +245,11 @@ void tocarBuzzer(uint16_t frequencia, uint16_t duracao) {
     pwm_set_chan_level(pwm_slice_num, PWM_CHAN_A, 2);
 }
 
+// Para o buzzer
+void pararBuzzer(void) {
+    pwm_set_chan_level(pwm_slice_num, PWM_CHAN_A, 0);
+}
+
 // Desenha um retângulo duplo no display
 void draw_double_rect(ssd1306_t *ssd, uint8_t x, uint8_t y, uint8_t width, uint8_t height) {
     ssd1306_rect(ssd, x, y, width, height, true, false);
