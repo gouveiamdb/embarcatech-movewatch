@@ -48,7 +48,7 @@
 #define NUM_PIXELS      25    // Total de LEDs na matriz (5x5)
 #define DEBOUNCE_DELAY  200   // Tempo de debounce em ms
 #define CENTRO_JOYSTICK 2048  // Valor central do ADC (12 bits)
-#define MARGEM_MOVIMENTO 2000 // 50% da escala ADC de 12 bits
+#define MARGEM_MOVIMENTO 2000 // percentual da escala ADC de 12 bits
 
 //===========================================================================
 // Estruturas e Variáveis Globais
@@ -60,7 +60,8 @@ typedef struct {
     bool modoBusca;
     bool movimentoDetectado;
     bool confirmacaoMovimento;
-    absolute_time_t tempoInicioAlarme;  // Usando o tipo correto do Pico SDK
+    absolute_time_t tempoInicioAlarme;
+    uint8_t tempoAlarme;
 } EstadoSistema;
 
 // Variáveis globais
@@ -118,7 +119,8 @@ void display_pattern(const uint8_t pattern[MATRIX_SIZE][MATRIX_SIZE], uint8_t r,
 uint16_t calculate_pwm(uint16_t value);
 uint16_t lerJoystickSuavizado(uint adc);
 void exibirMensagensSequenciais(const char* mensagens[], int numMensagens, int tempoExibicao);
-
+bool verificarTimeoutAlarme(void);
+void enviarLog(const char* mensagem);
 
 // Funções de callback e tratamento de eventos
 void gpio_callback(uint gpio, uint32_t events);
@@ -128,8 +130,6 @@ void joystick_callback(void);
 void configurarTempoAlarme(void);
 void processarModoBusca(void);
 void monitorarJoystick(void);
-void verificarBotoes(void);
-void verificarBotoesAntesDeIniciar(void);
 
 //===========================================================================
 // Funções de Inicialização
@@ -333,19 +333,22 @@ void exibirMensagensSequenciais(const char* mensagens[], int numMensagens, int t
     }
 }
 
+// Verifica se o alarme deve ser desligado pelo timeout
+bool verificarTimeoutAlarme() {
+    if (!estado.movimentoDetectado || estado.confirmacaoMovimento) {
+        return false;
+    }
+    
+    // Verifica se passou o tempo configurado
+    absolute_time_t tempoAtual = get_absolute_time();
+    int64_t diferenca = absolute_time_diff_us(estado.tempoInicioAlarme, tempoAtual) / 1000000;  // Converte para segundos
+    
+    return (diferenca >= estado.tempoAlarme);  // Usa o tempo configurado pelo usuário
+}
 
 // Envia logs para a UART
-void enviarLog(const char* formato, ...) {
-    char buffer[256]; // Buffer para a mensagem formatada
-    va_list args;
-    
-    // Processar argumentos variáveis como printf
-    va_start(args, formato);
-    vsnprintf(buffer, sizeof(buffer) - 1, formato, args);
-    va_end(args);
-    
-    // Enviar para a UART com timestamp
-    printf("[%lu] %s\n", time_us_32() / 1000000, buffer);
+void enviarLog(const char* mensagem) {
+    printf("[%lu] %s\n", time_us_32() / 1000000, mensagem);
 }
 
 //===========================================================================
