@@ -35,14 +35,17 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(MoveWatch MoveWatch.c )
+add_executable(MoveWatch MoveWatch.c 
+inc/ssd1306.c)
+
+pico_generate_pio_header(MoveWatch ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio)
 
 pico_set_program_name(MoveWatch "MoveWatch")
 pico_set_program_version(MoveWatch "0.1")
 
 # Modify the below lines to enable/disable output over UART/USB
-pico_enable_stdio_uart(MoveWatch 0)
-pico_enable_stdio_usb(MoveWatch 0)
+pico_enable_stdio_uart(MoveWatch 1)
+pico_enable_stdio_usb(MoveWatch 1)
 
 # Add the standard library to the build
 target_link_libraries(MoveWatch
@@ -51,11 +54,18 @@ target_link_libraries(MoveWatch
 # Add the standard include files to the build
 target_include_directories(MoveWatch PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}
+        inc
 )
 
 # Add any user requested libraries
 target_link_libraries(MoveWatch 
-        
+        pico_stdlib
+        hardware_gpio
+        hardware_pio
+        hardware_adc
+        hardware_i2c
+        hardware_pwm
+        hardware_uart
         )
 
 pico_add_extra_outputs(MoveWatch)
