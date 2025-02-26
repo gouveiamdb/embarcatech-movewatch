@@ -82,9 +82,6 @@
     [ "pico:GND.1", "btn2:1.r", "black", [ "h-76.8", "v9.6" ] ],
     [ "pico:GP5", "btn1:2.r", "gold", [ "h-76.8", "v-48" ] ],
     [ "pico:GP6", "btn2:2.r", "blue", [ "h-76.8", "v-19.2" ] ],
-    [ "rgb1:R", "pico:GP11", "red", [ "v4.6", "h19.2", "v-43" ] ],
-    [ "rgb1:G", "pico:GP12", "green", [ "v-1.3", "h48", "v-9.64" ] ],
-    [ "rgb1:B", "pico:GP13", "blue", [ "h47.2", "v3" ] ],
     [ "pico:GND.5", "oled1:GND", "black", [ "h29.11", "v67.24", "h-57.6" ] ],
     [ "oled1:VCC", "vcc1:VCC", "red", [ "v-19.2", "h0.15" ] ],
     [ "pico:GP14", "oled1:SDA", "white", [ "h-19.2", "v19.24", "h86.4" ] ],
@@ -147,7 +144,10 @@
     [ "rgb17:VDD", "pico:VSYS", "red", [ "h-19.2", "v144", "h134.4", "v48" ] ],
     [ "rgb12:VDD", "pico:VSYS", "red", [ "h-19.2", "v105.6", "h134.4", "v48" ] ],
     [ "rgb7:VDD", "pico:VSYS", "red", [ "h-19.2", "v67.2", "h134.4", "v48" ] ],
-    [ "rgb2:VDD", "pico:VSYS", "red", [ "h-19.2", "v28.8", "h134.4", "v48" ] ]
+    [ "rgb2:VDD", "pico:VSYS", "red", [ "h-19.2", "v28.8", "h134.4", "v48" ] ],
+    [ "pico:GP13", "rgb1:R", "red", [ "h-57.6", "v19.24" ] ],
+    [ "rgb1:G", "pico:GP12", "blue", [ "v-1.3", "h28.8", "v-9.6" ] ],
+    [ "pico:GP11", "rgb1:B", "green", [ "h-76.8", "v9.6" ] ]
   ],
   "dependencies": {}
 }

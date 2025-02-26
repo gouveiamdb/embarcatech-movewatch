@@ -117,7 +117,7 @@ O vídeo mostra:
 - Monitoramento da movimentação.
 - Animações da matriz de LEDs WS2812.
 
-📌 **[Link para o vídeo](#) (A ser adicionado)**
+📌 **[Link para o vídeo](https://drive.google.com/file/d/1bIXVT5HDBMOJAykcu7k_OgcOvw1OGY11/view?usp=drive_link)
 
 ---
 
